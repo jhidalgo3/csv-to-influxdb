@@ -32,9 +32,9 @@ type config struct {
 	NoAutoCreate    bool   `help:"Disable automatic creation of database"`
 	ForceFloat      bool   `help:"Force all numeric values to insert as float"`
 	ForceString     bool   `help:"Force all numeric values to insert as string"`
-	TreatNull	    bool   `help:"Force treating 'null' string values as such"`
+	TreatNull       bool   `help:"Force treating 'null' string values as such"`
 	Attempts        int    `help:"Maximum number of attempts to send data to influxdb before failing"`
-	HttpTimeout	    int    `help:"Timeout (in seconds) for http writes used by underlying influxdb client"`
+	HttpTimeout     int    `help:"Timeout (in seconds) for http writes used by underlying influxdb client"`
 }
 
 func main() {
@@ -42,7 +42,7 @@ func main() {
 	//configuration defaults
 	conf := config{
 		Server:          "http://localhost:8086",
-		Database:        "test",
+		Database:        "cost",
 		Username:        "",
 		Password:        "",
 		Measurement:     "data",
@@ -52,13 +52,13 @@ func main() {
 		TreatNull:       false,
 		TimestampColumn: "timestamp",
 		TimestampFormat: "2006-01-02 15:04:05",
-		HttpTimeout:	 10,
+		HttpTimeout:     10,
 	}
 
 	//parse config
 	opts.New(&conf).
 		Name("csv-to-influxdb").
-		Repo("github.com/jpillora/csv-to-influxdb").
+		Repo("github.com/jhidalgo3/csv-to-influxdb").
 		Version(VERSION).
 		Parse()
 
@@ -71,6 +71,8 @@ func main() {
 		}
 	}
 
+	fmt.Println("%s", tagNames)
+
 	//regular expressions
 	numbersRe := regexp.MustCompile(`\d`)
 	integerRe := regexp.MustCompile(`^\d+$`)
@@ -79,6 +81,7 @@ func main() {
 	falseRe := regexp.MustCompile(`^(false|F|False|FALSE)$`)
 	nullRe := regexp.MustCompile(`^(null|Null|NULL)$`)
 	timestampRe, err := regexp.Compile("^" + numbersRe.ReplaceAllString(conf.TimestampFormat, `\d`) + "$")
+	index := 0
 	if err != nil {
 		log.Fatalf("time stamp regexp creation failed")
 	}
@@ -158,7 +161,7 @@ func main() {
 	bpSize := 0
 	totalSize := 0
 
-	// lastCount := ""
+	//lastCount := ""
 
 	//write the current batch
 	write := func() {
@@ -179,14 +182,14 @@ func main() {
 			break
 		}
 		//TODO(jpillora): wait until the new points become readable
-		// count := ""
-		// for count == lastCount {
-		// 	resp, err := c.Query(client.Query{Command: "SELECT count(" + firstField + ") FROM " + conf.Measurement, Database: conf.Database})
-		// 	if err != nil {
-		// 		log.Fatal("failed to count rows")
-		// 	}
-		// 	count = resp.Results[0].Series[0].Values[0][1].(string)
-		// }
+		/*count := ""
+		for count == lastCount {
+			resp, err := c.Query(client.Query{Command: "SELECT count(" + firstField + ") FROM " + conf.Measurement, Database: conf.Database})
+			if err != nil {
+				log.Fatal("failed to count rows")
+			}
+			count = resp.Results[0].Series[0].Values[0][1].(string)
+		}*/
 		//reset
 		bp, _ = client.NewBatchPoints(bpConfig)
 		bpSize = 0
@@ -194,6 +197,7 @@ func main() {
 
 	//read csv, line by line
 	r := csv.NewReader(f)
+	r.Comma = ';'
 	for i := 0; ; i++ {
 		records, err := r.Read()
 		if err != nil {
@@ -234,15 +238,24 @@ func main() {
 				}
 				if conf.TimestampColumn == h {
 					ts = t //the timestamp column!
+
+					ts = ts.Add(10 * time.Nanosecond)
+
 					continue
 				}
 				fields[h] = t
 			} else if conf.TimestampColumn == h && conf.TimestampFormat == "unix" {
+
 				tt, _ := strconv.Atoi(r)
+
 				ts = time.Unix(0, int64(tt))
+				ts = ts.Add(10 * time.Nanosecond)
+
 				continue
 			} else if !conf.ForceFloat && !conf.ForceString && integerRe.MatchString(r) {
+
 				i, _ := strconv.Atoi(r)
+				fmt.Printf("[%h] %v \n", i, h)
 				fields[h] = i
 			} else if !conf.ForceString && floatRe.MatchString(r) {
 				f, _ := strconv.ParseFloat(r, 64)
@@ -259,6 +272,8 @@ func main() {
 			}
 		}
 
+		//fmt.Printf("[%d] %v %v\n", index, ts, fields)
+		index++
 		p, err := client.NewPoint(conf.Measurement, tags, fields, ts)
 		if err != nil {
 			log.Println(err)

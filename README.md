@@ -1,16 +1,18 @@
 
 # csv-to-influxdb
 
+Original code by [@jpillora](https://github.com/jpillora)
+
 ### Install
 
 **Binaries**
 
-See [the latest release](https://github.com/jpillora/csv-to-influxdb/releases/latest) or download it now with `curl https://i.jpillora.com/csv-to-influxdb | bash`
+See [the latest release](https://github.com/jhidalgo3/csv-to-influxdb/releases/latest) or download it now with `curl https://i.jhidalgo3.com/csv-to-influxdb | bash`
 
 **Source**
 
 ``` sh
-$ go get -v github.com/jpillora/csv-to-influxdb
+$ go get -v github.com/jhidalgo3/csv-to-influxdb
 ```
 
 ### Usage
@@ -47,13 +49,15 @@ $ csv-to-influxdb --help
     0.1.2
 
   Read more:
-    github.com/jpillora/csv-to-influxdb
+    github.com/jhidalgo3/csv-to-influxdb
 
 ```
 
+*Example*: `./csv-to-influxdb -ts Date -tf "02/01/2006 15:04" -f -t "Username,Prefijo" Book.csv`
+
 #### MIT License
 
-Copyright © 2016 &lt;dev@jpillora.com&gt;
+Copyright © 2017 &lt;jhidalgo3@gmail.com&gt;
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
